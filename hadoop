@@ -1,0 +1,48 @@
+import threading
+
+def read_file(file_path):
+    with open(file_path, 'r') as f:
+        text = f.read()
+    return text.split()
+
+def map_func(words):
+    word_count = {}
+    for word in words:
+        if word not in word_count:
+            word_count[word] = 1
+        else:
+            word_count[word] += 1
+    return word_count.items()
+
+def reduce_func(word, counts):
+    return (word, sum(counts))
+
+def run_threads(func, data, num_threads):
+    threads = []
+    results = []
+    chunk_size = len(data) // num_threads
+    for i in range(num_threads):
+        start = i * chunk_size
+        end = start + chunk_size if i < num_threads - 1 else len(data)
+        thread_data = data[start:end]
+        thread = threading.Thread(target=func, args=(thread_data, results))
+        threads.append(thread)
+        thread.start()
+    for thread in threads:
+        thread.join()
+    return results
+
+def map_threads(words, results):
+    results.extend(map_func(words))
+
+def reduce_threads(word_counts, results):
+    for word, counts in word_counts:
+        results.append(reduce_func(word, counts))
+
+def word_count(file_path, num_threads=4):
+    words = read_file(file_path)
+    map_results = run_threads(map_threads, words, num_threads)
+    reduce_results = run_threads(reduce_threads, map_results, num_threads)
+    return dict(reduce_results)
+result = word_count('example.txt', num_threads=4)
+print(result)
